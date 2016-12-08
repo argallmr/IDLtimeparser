@@ -331,7 +331,7 @@ TZ_OUT=tz_out
 
 		;Check for matches.
 		if isMatch eq 0 then $
-			if arg_present(isMatch) eq 0 then message, 'Could not match pattern "' + inPattern + '" to time "' + time[0] + '".'
+			if arg_present(isMatch) eq 0 then message, 'Could not match pattern "' + patternIn + '" to time "' + time[0] + '".'
 	endif
 
 ;-----------------------------------------------------

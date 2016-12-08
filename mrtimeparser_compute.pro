@@ -194,7 +194,7 @@ end
 ; :Returns:
 ;       CMONTH:     The calendar month name.
 ;-
-function MrTimeParser_GetCMonth, cmonth, month, calmo, doy
+function MrTimeParser_GetCMonth, cmonth, month, calmo, doy, year, yr
 	compile_opt idl2
 	on_error, 2
 
@@ -204,7 +204,7 @@ function MrTimeParser_GetCMonth, cmonth, month, calmo, doy
 			month[0]  ne '': cmonth = MonthNumberToName(month)
 			calmo[0]  ne '': cmonth = MonthNameToNumber( MonthNumberToName(calmo), /ABBR )
 			doy[0]    ne '': begin
-				MrTimeParser_ParseDOY, month, day
+				MrTimeParser_ParseDOY, doy, year, yr, month, day
 				cmonth = MonthNumberToName(month)
 			endcase
 			else: message, 'Cannot form "%C". Must give %M, %C, %c or %D.'
@@ -221,7 +221,7 @@ end
 ; :Returns:
 ;       CALMO:      The abbreviated calendar month name.
 ;-
-function MrTimeParser_GetCalMo, calmo, month, cmonth, doy
+function MrTimeParser_GetCalMo, calmo, month, cmonth, doy, year, yr
 	compile_opt idl2
 	on_error, 2
 
@@ -231,7 +231,7 @@ function MrTimeParser_GetCalMo, calmo, month, cmonth, doy
 			month[0]  ne '': cmonth = MonthNumberToName(month, /ABBR)
 			calmo[0]  ne '': cmonth = MonthNameToNumber( MonthNumberToName(calmo) )
 			doy[0]    ne '': begin
-				MrTimeParser_ParseDOY, month, day
+				MrTimeParser_ParseDOY, doy, year, yr, month, day
 				cmonth = MonthNumberToName(month, /ABBR)
 			endcase
 			else: message, 'Cannot form "%c". Must give %M and, %C, %c or %D.'
@@ -248,14 +248,14 @@ end
 ; :Returns:
 ;       DAY:        The abbreviated calendar month name.
 ;-
-function MrTimeParser_GetDay, day, doy
+function MrTimeParser_GetDay, day, doy, year, yr
 	compile_opt idl2
 	on_error, 2
 
 	;Calculate from day-of-year
 	if day[0] eq '' then begin
 		case 1 of
-			doy[0] ne '': MrTimeParser_ParseDOY, month, day
+			doy[0] ne '': MrTimeParser_ParseDOY, doy, year, yr, month, day
 			else: message, 'Cannot form "%d". Must give %d or %D.'
 		endcase
 	endif
@@ -442,7 +442,7 @@ end
 ; :Returns:
 ;       MONTH:      The 2-digit year
 ;-
-function MrTimeParser_GetMonth, month, cmonth, calmo, doy
+function MrTimeParser_GetMonth, month, cmonth, calmo, doy, year, yr
 	compile_opt idl2
 	on_error, 2
 
@@ -451,7 +451,7 @@ function MrTimeParser_GetMonth, month, cmonth, calmo, doy
 		case 1 of
 			cmonth[0] ne '': month = MonthNameToNumber(cmonth)
 			calmo[0]  ne '': month = MonthNameToNumber(calmo, /ABBR)
-			doy[0]    ne '': MrTimeParser_ParseDOY, month, day
+			doy[0]    ne '': MrTimeParser_ParseDOY, doy, year, yr, month, day
 			else: message, 'Cannot form "%M". Must give (%M, %C, %c or %D).'
 		endcase
 	endif
@@ -696,7 +696,7 @@ end
 ;       DAY:        out, optional, type=string
 ;                   Day of the `MONTH` corresponding to `DOY`.
 ;-
-pro MrTimeParser_ParseDOY, month_out, day_out
+pro MrTimeParser_ParseDOY, doy, year, yr, month, day
 	compile_opt strictarr
 	on_error, 2
 
@@ -704,19 +704,13 @@ pro MrTimeParser_ParseDOY, month_out, day_out
 	if doy[0] eq '' then message, 'DOY not given. Cannot parse.'
 
 	;Try to get the year
-	catch, the_error
-	if the_error eq 0 then begin
-		year = MrTimeParser_GetYear()
-		catch, /CANCEL
-	endif else begin
-		catch, /CANCEL
-		MrPrintF, 'LogWarn', 'No year given. Converting %D to %M for non-leap year.'
-		year = replicate('2001', n_elements(doy))
-	endelse
-	on_error, 2
+	case 1 of
+		year[0] ne '': monthday = year_day(doy, YEAR=year, /TO_MODAY)
+		yr[0]   ne '': monthday = year_day(doy, YEAR=yr, /TO_MODAY)
+		else:          monthday = year_day(doy, /TO_MODAY)
+	endcase
 
 	;Get the month and day
-	monthday = year_day(doy, YEAR=year, /TO_MODAY)
 	month    = strmid(monthday, 0, 2)
 	day      = strmid(monthday, 3, 2)
 end
@@ -993,10 +987,10 @@ OFFSET=offset
 		case tokens[i] of
 			'Y': substr = MrTimeParser_GetYear(year, yr)
 			'y': substr = MrTimeParser_GetYr(yr, year)
-			'M': substr = MrTimeParser_GetMonth(month, cmonth, calmo, doy)
-			'C': substr = MrTimeParser_GetCMonth(cmonth, month, calmo, doy)
-			'c': substr = MrTimeParser_GetCalMo(calmo, month, cmonth, doy)
-			'd': substr = MrTimeParser_GetDay(day, doy)
+			'M': substr = MrTimeParser_GetMonth(month, cmonth, calmo, doy, year, yr)
+			'C': substr = MrTimeParser_GetCMonth(cmonth, month, calmo, doy, year, yr)
+			'c': substr = MrTimeParser_GetCalMo(calmo, month, cmonth, doy, year, yr)
+			'd': substr = MrTimeParser_GetDay(day, doy, year, yr)
 			'D': substr = MrTimeParser_GetDOY(doy, year, yr, month, cmonth, calmo, day)
 			'W': substr = MrTimeParser_GetWeekDay(weekday, wkday, year, yr, month, cmonth, calmo, doy, day)
 			'w': substr = MrTimeParser_GetWkDay(wkday, weekday, year, yr, month, cmonth, calmo, doy, day)

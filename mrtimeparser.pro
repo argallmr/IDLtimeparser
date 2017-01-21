@@ -275,7 +275,9 @@ TZ_OUT=tz_out
 	catch, the_error
 	if the_error ne 0 then begin
 		catch, /cancel
-		MrPrintF, 'LogErr'
+		timeOut = ''
+		isMatch = 0B
+		if ~arg_present(isMatch) then MrPrintF, 'LogErr'
 		return
 	endif
 

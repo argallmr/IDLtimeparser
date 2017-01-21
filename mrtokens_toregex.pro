@@ -121,6 +121,7 @@
 ;       2014/07/20  -   Made the %z token more exlusive. See notes above. - MRA
 ;       2015/06/05  -   Month (%M) and day (%d) can be expressed as 1-digit numbers. - MRA
 ;       2015/06/29  -   Strsplit missed "*" and "." if they were at the end of PATTERN. Fixed. - MRA
+;       2016/12/20  -   Was returning the empty string when no tokens in pattern. Fixed. - MRA
 ;-
 function MrTokens_ToRegex, pattern, $
 COUNT=nTokens, $
@@ -151,7 +152,7 @@ IGNORE_PARENS=ignore_parens
         _pattern = strjoin(strsplit(_pattern, '*', /EXTRACT), '.*')
         if strmid(pattern, len-1) eq '*' then _pattern += '.*'
     endif
-    
+
     ;Extract the tokens
     tokens = MrTokens_Extract(_pattern, COUNT=nTokens, POSITIONS=positions)
 
@@ -217,7 +218,10 @@ IGNORE_PARENS=ignore_parens
     endfor
 
     ;Add any characters after the last token.
-    regex += strmid(_pattern, positions[i-1]+2)
+    ;   - If no tokens were present in the input string, I=0.
+    if i eq 0 $
+        then regex = _pattern $
+        else regex += strmid(_pattern, positions[i-1]+2)
 
     ;Search for "\%" and replace with "%"
     if strpos(regex, '\%') ne -1 $

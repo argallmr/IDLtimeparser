@@ -136,6 +136,7 @@
 ;   Modification History::
 ;       2014-03-15  -   Written by Matthew Argall.
 ;       2016-10-27  -   Extracted from MrTimeParser. - MRA
+;       2017-01-16  -   HOUR, HR, MINUTE, and SECOND now all default to '00' (AM) - MRA
 ;-
 ;*****************************************************************************************
 ;+
@@ -341,27 +342,32 @@ function MrTimeParser_GetHour, hour, hr, am_pm
 	compile_opt idl2
 	on_error, 2
 
-	;12-Hour clock?
-	if hour[0] eq '' then if hr[0] ne '' then begin
-		hour = hr
+	;Compute the hour
+	if hour[0] eq '' then begin
+		;12-Hour clock?
+		if hr[0] ne '' then begin
+			hour = hr
 		
-		;AM/PM -- assume AM if not given
-		if am_pm[0] eq '' then begin
-			message, '%A not given. Assuming AM.', /INFORMATIONAL
+			;AM/PM -- assume AM if not given
+			if am_pm[0] eq '' then begin
+				message, '%A not given. Assuming AM.', /INFORMATIONAL
 		
-		;Convert to 24-hour clock by adding 12 to the hours 1-11pm
-		endif else begin
-			iPM = where(am_pm eq 'PM', nPM)
-			if nPM gt 0 then begin
-				iPNoon = where(fix(hr[iPM]) lt 12, nPNoon)
-				if nPNoon gt 0 then hour[iPM[iPNoon]] = string(fix(hr[iPM[iPNoon]]) + 12, FORMAT='(i02)')
-			endif
-		endelse
+			;Convert to 24-hour clock by adding 12 to the hours 1-11pm
+			endif else begin
+				iPM = where(am_pm eq 'PM', nPM)
+				if nPM gt 0 then begin
+					iPNoon = where(fix(hr[iPM]) lt 12, nPNoon)
+					if nPNoon gt 0 then hour[iPM[iPNoon]] = string(fix(hr[iPM[iPNoon]]) + 12, FORMAT='(i02)')
+				endif
+			endelse
 	
-	;Cannot determine
-	endif else begin
-		message, 'Cannot form "%H". Must give %H or %h.'
-	endelse
+		;Default to midnight
+		endif else begin
+			hour  = '00'
+			hr    = '00'
+			am_pm = 'AM'
+		endelse
+	endif
 	
 	return, hour
 end
@@ -378,23 +384,28 @@ function MrTimeParser_GetHr, hr, hour, am_pm
 	compile_opt idl2
 	on_error, 2
 	
-	;24-hour clock?
-	if hr[0] eq '' then if hour[0] ne '' then begin
-		;From 24 to 12
-		hr = hour
-		iPM = where(fix(hour) ge 12, nPM)
-		if nPM gt 0 then hr[iPM] = string(fix(hour[iPM]) - 12, FORMAT='(i02)')
+	;Compute 2-digit hour
+	if hr[0] eq '' then begin
+		;24-hour clock?
+		if hour[0] ne '' then begin
+			;From 24 to 12
+			hr = hour
+			iPM = where(fix(hour) ge 12, nPM)
+			if nPM gt 0 then hr[iPM] = string(fix(hour[iPM]) - 12, FORMAT='(i02)')
 		
-		;AM or PM?
-		if am_pm[0] eq '' then begin
-			am_pm = strarr(n_elements(hr)) + 'AM'
-			if nPM gt 0 then am_pm[iPM] = 'PM'
-		endif
+			;AM or PM?
+			if am_pm[0] eq '' then begin
+				am_pm = strarr(n_elements(hr)) + 'AM'
+				if nPM gt 0 then am_pm[iPM] = 'PM'
+			endif
 	
-	;Cannot determine
-	endif else begin
-		message, 'Cannot form "%h". Must give %H or %h (with optional %A).'
-	endelse
+		;Cannot determine
+		endif else begin
+			hour  = '00'
+			hr    = '00'
+			am_pm = 'AM'
+		endelse
+	endif
 	
 	return, hr
 end
@@ -996,8 +1007,8 @@ OFFSET=offset
 			'w': substr = MrTimeParser_GetWkDay(wkday, weekday, year, yr, month, cmonth, calmo, doy, day)
 			'H': substr = MrTimeParser_GetHour(hour, hr, am_pm)
 			'h': substr = MrTimeParser_GetHr(hr, hour, am_pm)
-			'm': if minute[0] eq '' then message, 'Cannot form "%m". Must give %m.' else subStr = minute
-			'S': if second[0] eq '' then message, 'Cannot form "%S". Must give %S.' else subStr = second
+			'm': substr = minute[0] eq '' ? '00' : minute
+			'S': substr = second[0] eq '' ? '00' : second
 			'f': substr = MrTimeParser_GetFraction(decimal, milli, micro, nano, pico)
 			'1': substr = MrTimeParser_GetMilli(milli, decimal)
 			'2': substr = MrTimeParser_GetMicro(micro, decimal)
